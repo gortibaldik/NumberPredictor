@@ -68,9 +68,7 @@ namespace Paint
         {
             if (net != null)
             {
-                // var source = PresentationSource.FromVisual(Canvas1);
-                // var matrix = source.CompositionTarget.TransformToDevice;
-                // matrix.M11 and matrix.M22 contain the dpiX/96 and dpiY/96
+                // copies the content of the InkCanvas 
                 var bmpCopied = new RenderTargetBitmap(28, 28, 96, 96, PixelFormats.Default);
                 DrawingVisual dv = new DrawingVisual();
                 using (DrawingContext dc = dv.RenderOpen())
@@ -79,15 +77,23 @@ namespace Paint
                     dc.DrawRectangle(vb, null, new Rect(new Point(), new Size(28, 28)));
                 }
                 bmpCopied.Render(dv);
+                
+                // prepares all the arrays before converting to tensor
                 int stride = bmpCopied.PixelWidth * (bmpCopied.Format.BitsPerPixel / 8);
                 byte[] pixels = new byte[(int)bmpCopied.PixelHeight * stride];
                 Tensor result = null;
                 bmpCopied.CopyPixels(pixels, stride, 0);
                 var pHeight = bmpCopied.PixelHeight;
                 var pWidth = bmpCopied.PixelWidth;
+
                 await Task.Run(() =>
                 {
-
+                    // the data are drawn only from the first channel
+                    // since the only colors used are black and white
+                    // the values in all the channels are either 0 or 255
+                    // there are 4 channels, and we create 1 channel tensor
+                    // therefore it suffices to copy every fourth pixel
+                    
                     double[] realPixels = new double[pHeight* pWidth];
                     for (int i = 0; i < pixels.Length; i++)
                         if (i % 4 == 0)
@@ -98,6 +104,9 @@ namespace Paint
                     result = net.Predict(new Tensor(1, 28, 28, image));
                 });
 
+                // probabilities are bound to the histogram elements on
+                // the wpf, therefore the probs are copied into probabilities
+                // which reflects its changes to images the user sees
                 var probs = new double[10];
                 for (int i = 0; i < 10; i++)
                     probs[i] = result[0, 0, i, 0];

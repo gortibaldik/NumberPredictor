@@ -134,9 +134,19 @@ namespace Paint
             {
                 // Open document 
                 string filename = dlg.FileName;
-                var serializer = new XmlSerializer(typeof(NeuralNetwork));
-                using (var reader = new StreamReader(filename))
-                    net = (NeuralNetwork)serializer.Deserialize(reader);
+
+                try
+                {
+                    var serializer = new XmlSerializer(typeof(NeuralNetwork));
+                    using (var reader = new StreamReader(filename))
+                        net = (NeuralNetwork)serializer.Deserialize(reader);
+                }
+                catch(Exception)
+                {
+                    MessageBox.Show("Loading of the neural network failed");
+                    net = null;
+                    return;
+                }
 
                 ProbPanel.Visibility = Visibility.Visible;
             }
